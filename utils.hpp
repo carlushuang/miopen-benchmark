@@ -81,34 +81,8 @@ struct layertimer {
         return result;
     }
 };
-#if 0
-struct CudaTime{
-    void Init(){
-        CHECK_CUDRI(cuEventCreate (&start, CU_EVENT_DEFAULT));
-        CHECK_CUDRI(cuEventCreate (&stop, CU_EVENT_DEFAULT));
-    }
-    void Destroy(){
-        cuEventDestroy(start);
-        cuEventDestroy(stop);
-    }
-    void Start(CUstream stream){
-        CHECK_CUDRI(cuEventRecord(start, stream));
-    }
-    void Stop(CUstream stream){
-        CHECK_CUDRI(cuCtxSynchronize());
-        CHECK_CUDRI(cuEventRecord(stop, stream));
-        CHECK_CUDRI(cuEventSynchronize(stop));
-    }
-    float GetElapsedMilliseconds(){
-        float elapsed_milliseconds;
-        CHECK_CUDRI(cuEventElapsedTime(&elapsed_milliseconds, start, stop));
-        return elapsed_milliseconds;
-    }
 
-    CUevent start;
-    CUevent stop;
-};
-#endif
+#ifdef __NVCC__
 struct CudaTime{
     void Init(){
         CHECK_CUDA(cudaEventCreate (&start));
@@ -135,6 +109,7 @@ struct CudaTime{
     cudaEvent_t start;
     cudaEvent_t stop;
 };
+#endif
 
 struct BenchmarkLogger : public Timer {
 
