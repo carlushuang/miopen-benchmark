@@ -1,4 +1,8 @@
+#ifdef __NVCC__
+#include "cudnn.hpp"
+#else
 #include "miopen.hpp"
+#endif
 #include "tensor.hpp"
 #include "utils.hpp"
 #include "layers.hpp"
@@ -22,7 +26,11 @@ std::map<std::string, ConvLayerDesc>& layers() {
 int main(int argc, char *argv[])
 {
     device_init();
+#ifdef __NVCC__
+
+#else
     CHECK_MIO(miopenEnableProfiling(mio::handle(), true));
+#endif
 
     std::string layer_name = "W1";
     if (argc >= 2) {

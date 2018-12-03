@@ -8,7 +8,11 @@
 #include <chrono>
 #include <vector>
 
+#ifdef __NVCC__
+#include "cudnn.hpp"
+#else
 #include "miopen.hpp"
+#endif
 #include "function.hpp"
 
 
@@ -78,6 +82,32 @@ struct layertimer {
     }
 };
 
+struct CudaTime{
+    void Init(){
+        CHECK_CUDRI(cuEventCreate (&start, CU_EVENT_DEFAULT));
+        CHECK_CUDRI(cuEventCreate (&stop, CU_EVENT_DEFAULT));
+    }
+    void Destroy(){
+        cuEventDestroy(start);
+        cuEventDestroy(stop);
+    }
+    void Start(CUstream stream){
+        CHECK_CUDRI(cuEventRecord(start, stream));
+    }
+    void Stop(CUstream stream){
+        CHECK_CUDRI(cuEventRecord(stop, stream));
+        CHECK_CUDRI(cuEventSynchronize(stop));
+    }
+    float GetElapsedMilliseconds(){
+        float elapsed_milliseconds;
+        CHECK_CUDRI(cuEventElapsedTime(&elapsed_milliseconds, start, stop));
+        return elapsed_milliseconds;
+    }
+
+    CUevent start;
+    CUevent stop;
+};
+
 struct BenchmarkLogger : public Timer {
 
     std::ofstream of;
@@ -138,7 +168,11 @@ struct BenchmarkLogger : public Timer {
     using Timer::toc;
     void toc(Function& f, bool bwd) {
 #if LAYER_TIMING == 1
+#ifdef __NVCC__
+        CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
         CHECK_HIP(hipDeviceSynchronize());
+#endif
         float dur = this->toc();
         std::stringstream ss;
         ss << f;
@@ -147,7 +181,11 @@ struct BenchmarkLogger : public Timer {
     }
 
     void toc(const std::string& s, bool bwd) {
+#ifdef __NVCC__
+        CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
         CHECK_HIP(hipDeviceSynchronize());
+#endif
         float dur = this->toc();
         log_step(s, bwd, dur);
     }
@@ -162,11 +200,25 @@ struct BenchmarkLogger : public Timer {
         INFO("Init fwd");
         m.init_forward();
         float layer_time;
+#ifdef __NVCC__
+        CudaTime cu_timer;
+        cu_timer.Init();
+#endif
         for (int i = 0; i < reps; ++i) {
+#ifdef __NVCC__
+            cu_timer.Start(Devices::get_default_device().cu_stream);
+            m.forward();
+            cu_timer.Stop(Devices::get_default_device().cu_stream);
+            layer_time = cu_timer.GetElapsedMilliseconds();
+#else
             m.forward();
             CHECK_MIO(miopenGetKernelTime(mio::handle(), &layer_time));
+#endif
             log_step("KernelTime", false, layer_time);
         }
+#ifdef __NVCC__
+        cu_timer.Destroy();
+#endif
     }
 
     template <typename M>
@@ -190,14 +242,22 @@ struct BenchmarkLogger : public Timer {
                 INFO("               ======= BEGIN FWD =======");
                 timer.tic();
                 m.forward();
+#ifdef __NVCC__
+                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
                 CHECK_HIP(hipDeviceSynchronize());
+#endif
                 log_step(m.get_name(), false, timer.toc());
             }
             if (runbwd) {
                 INFO("               ======= BEGIN BWD =======");
                 timer.tic();
                 m.backward();
+#ifdef __NVCC__
+                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
                 CHECK_HIP(hipDeviceSynchronize());
+#endif
                 log_step(m.get_name(), true, timer.toc());
             }
         }
@@ -212,14 +272,22 @@ struct BenchmarkLogger : public Timer {
                 INFO("               ======= BEGIN FWD =======");
                 fwdtime.tic();
                 m.forward();
+#ifdef __NVCC__
+                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
                 CHECK_HIP(hipDeviceSynchronize());
+#endif
                 log_step(m.get_name(), false, fwdtime.toc());
             }
             if (runbwd) {
                 INFO("               ======= BEGIN BWD =======");
                 bwdtime.tic();
                 m.backward();
+#ifdef __NVCC__
+                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+#else
                 CHECK_HIP(hipDeviceSynchronize());
+#endif
                 log_step(m.get_name(), true, bwdtime.toc());
             }
         }

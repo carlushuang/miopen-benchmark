@@ -1,4 +1,8 @@
+#ifdef __NVCC__
+#include "cudnn.hpp"
+#else
 #include "miopen.hpp"
+#endif
 #include "tensor.hpp"
 #include "utils.hpp"
 #include "layers.hpp"
@@ -53,10 +57,16 @@ int main(int argc, char *argv[])
     device_init();
 
     // enable profiling
+#ifdef __NVCC__
+#else
     CHECK_MIO(miopenEnableProfiling(mio::handle(), true));
+#endif
 
     alexNet();
-
+#ifdef __NVCC__
+    cudnnDestroy(cudnn::handle());
+#else
     miopenDestroy(mio::handle());
+#endif
     return 0;
 }

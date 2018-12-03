@@ -1,4 +1,8 @@
+#ifdef __NVCC__
+#include "cudnn.hpp"
+#else
 #include "miopen.hpp"
+#endif
 #include "tensor.hpp"
 #include "utils.hpp"
 #include "layers.hpp"
@@ -126,7 +130,10 @@ Model resnet(const std::string& name) {
 int main(int argc, char *argv[])
 {
     device_init();
+#ifdef __NVCC__
+#else
     CHECK_MIO(miopenEnableProfiling(mio::handle(), true));
+#endif
 
     std::string mname = "resnet50";
     Model m = resnet(mname);

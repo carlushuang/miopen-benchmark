@@ -1,7 +1,11 @@
 // file to just try out stuff
 // mostly used for printf debugging (first iteration)
 
+#ifdef __NVCC__
+#include "cudnn.hpp"
+#else
 #include "miopen.hpp"
+#endif
 #include "tensor.hpp"
 #include "utils.hpp"
 #include "layers.hpp"
@@ -27,7 +31,10 @@ int main(int argc, char *argv[])
     device_init();
 
     // enable profiling
+#ifdef __NVCC__
+#else
     CHECK_MIO(miopenEnableProfiling(mio::handle(), true));
+#endif
 
     /*
     TensorDesc input(32, 3, 8, 8);
@@ -40,7 +47,10 @@ int main(int argc, char *argv[])
     }
     */
     check_add();
-
+#ifdef __NVCC__
+    cudnnDestroy(cudnn::handle());
+#else
     miopenDestroy(mio::handle());
+#endif
     return 0;
 }

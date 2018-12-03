@@ -1,7 +1,11 @@
 #ifndef MULTI_LAYERS_HPP
 #define MULTI_LAYERS_HPP
 
+#ifdef __NVCC__
+#include <cuda_runtime.h>
+#else
 #include <hip/hip_runtime.h>
+#endif
 
 #include "tensor.hpp"
 #include "function.hpp"
@@ -213,7 +217,23 @@ void add_inplace(Tensor& x, const Tensor& y) {
     miopenOpTensor(mio::handle(), miopenTensorOpAdd, &alpha1, x.desc, x.data, &alpha2, y.desc, y.data, &beta, x.desc, x.data);
 }
 */
+#ifdef __NVCC__
+__global__ void addinplace_kernel(float* x, const float* y, size_t N) {
+    size_t offset = blockIdx.x * blockDim.x + threadIdx.x;
+    size_t stride = blockDim.x * gridDim.x;
 
+    for (size_t i = offset; i < N; i+= stride) {
+        x[i] = x[i] + y[i];
+    }
+}
+
+void add_inplace(Tensor& x, const Tensor& y) {
+    unsigned int blocks = 512;
+    unsigned int threadsPerBlock = 256;
+    assert(x.data_size == y.data_size);
+    addinplace_kernel<<<blocks, threadsPerBlock>>>((float*)x.data, (float*)y.data, x.data_size/4);
+}
+#else
 __global__ void addinplace_kernel(hipLaunchParm lp, float* x, const float* y, size_t N) {
     size_t offset = hipBlockIdx_x * hipBlockDim_x + hipThreadIdx_x;
     size_t stride = hipBlockDim_x * hipGridDim_x;
@@ -229,6 +249,7 @@ void add_inplace(Tensor& x, const Tensor& y) {
     assert(x.data_size == y.data_size);
     hipLaunchKernel(addinplace_kernel, dim3(blocks), dim3(threadsPerBlock), 0, 0, (float*)x.data, (float*)y.data, x.data_size/4);
 }
+#endif
 
 struct ShortCutAdd : public Function {
     // Implements Residual Shortcutting: y = F(x) + x

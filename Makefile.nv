@@ -1,0 +1,56 @@
+CUDA_PATH ?= "/usr/local/cuda-9.2"
+HOST_COMPILER ?= g++
+NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
+TARGET_SIZE ?= 64
+LAYER_TIMING=1
+
+# internal flags
+NVCCFLAGS   := -m${TARGET_SIZE} --std=c++11
+CCFLAGS     := -DLAYER_TIMING=$(LAYER_TIMING) -std=c++11 -Wno-literal-suffix -O3
+LDFLAGS     := -lcudnn -lcublas -lcuda
+
+# sm gencode
+SMS ?= 50 52 60 61 70
+HIGHEST_SM := $(lastword $(sort $(SMS)))
+$(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
+GENCODE_FLAGS += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
+
+ALL_CCFLAGS :=
+ALL_CCFLAGS += $(NVCCFLAGS)
+ALL_CCFLAGS += $(addprefix -Xcompiler ,$(CCFLAGS))
+
+ALL_LDFLAGS :=
+# ALL_LDFLAGS += $(ALL_CCFLAGS)
+ALL_LDFLAGS += $(addprefix -Xlinker ,$(LDFLAGS))
+
+all: alexnet resnet benchmark_wino layerwise gputop
+
+HEADERS=function.hpp layers.hpp miopen.hpp multi_layers.hpp tensor.hpp utils.hpp
+
+benchmark: all
+	./benchmark_wino W1 1000 | tee W1.log \
+	&& ./benchmark_wino L2 10000 | tee L2.log \
+	&& ./layerwise | tee layerwise.log \
+	&& ./alexnet | tee alexnet.log \
+	&& ./resnet | tee resnet50.log
+
+alexnet: alexnet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu alexnet.cpp
+
+main: main.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu main.cpp
+
+gputop: gputop.cpp miopen.hpp
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu gputop.cpp
+
+resnet: resnet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu resnet.cpp
+
+benchmark_wino: benchmark_wino.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu benchmark_wino.cpp
+
+layerwise: layerwise.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu layerwise.cpp
+
+clean:
+	rm -f *.o *.out benchmark segfault alexnet resnet benchmark_wino layerwise gputop main
