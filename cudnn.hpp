@@ -1,7 +1,6 @@
 #ifndef MY_CUDNN_HPP
 #define MY_CUDNN_HPP
 
-#include <cuda.h>
 #include <cuda_runtime.h>
 #include <cudnn.h>
 #include <cublas_v2.h>
@@ -26,22 +25,13 @@
 #define FINISH()   assert(0)
 
 #define CHECK_CUDA(cmd) \
-{\
+do {\
     cudaError_t cuda_error  = cmd;\
     if (cuda_error != cudaSuccess) { \
         fprintf(stderr, "error: '%s'(%d) at %s:%d\n", cudaGetErrorString(cuda_error), cuda_error,__FILE__, __LINE__); \
         FINISH();\
     }\
-}
-
-#define CHECK_CUDRI(cmd) \
-{\
-    CUresult cu_error  = cmd;\
-    if (cu_error != CUDA_SUCCESS) { \
-        fprintf(stderr, "error: cu %d at %s:%d\n", cu_error,__FILE__, __LINE__); \
-        FINISH();\
-    }\
-}
+} while(0)
 
 #define device_mem_t void*
 
@@ -174,9 +164,6 @@ typedef struct _wrap_nvml_handle
 struct Device {
     int gpu_id;
     cudaDeviceProp props;
-    CUdevice cu_id;
-    CUcontext cu_ctx;
-    CUstream  cu_stream;
 
     void print_info();
     float getTemp();
@@ -309,14 +296,14 @@ struct Devices {
 
 // docs.nvidia.com/cuda/cuda-driver-api/index.html
 void Device::init_cuda_driver(){
-    CHECK_CUDRI(cuDeviceGet(&cu_id, gpu_id));
-    CHECK_CUDRI(cuDevicePrimaryCtxRetain(&cu_ctx, cu_id));
-    CHECK_CUDRI(cuCtxSetCurrent(cu_ctx));
-    CHECK_CUDRI(cuStreamCreate(&cu_stream, CU_STREAM_DEFAULT));
+    //CHECK_CUDRI(cuDeviceGet(&cu_id, gpu_id));
+    //CHECK_CUDRI(cuDevicePrimaryCtxRetain(&cu_ctx, cu_id));
+    //CHECK_CUDRI(cuCtxSetCurrent(cu_ctx));
+    //CHECK_CUDRI(cuStreamCreate(&cu_stream, CU_STREAM_DEFAULT));
 }
 void Device::finish_cuda_driver(){
-    cuDevicePrimaryCtxRelease(cu_id);
-    cuStreamDestroy(cu_stream);
+    //cuDevicePrimaryCtxRelease(cu_id);
+    //cuStreamDestroy(cu_stream);
 }
 
 void Device::print_info() {
@@ -373,13 +360,13 @@ void device_init() {
 }
 
 #define CHECK_CUDNN(cmd) \
-{\
+do {\
     cudnnStatus_t stat = cmd;\
     if (stat != CUDNN_STATUS_SUCCESS) { \
         fprintf(stderr, "error: '%s'(%d) at %s:%d\n", cudnnGetErrorString(stat), stat,__FILE__, __LINE__); \
         FINISH();\
     }\
-}
+} while(0)
 
 // get cudnnHandle globally via `cudnn::handle()`
 struct cudnn {

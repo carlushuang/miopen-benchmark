@@ -98,8 +98,9 @@ struct TensorDesc : public Dim {
 
     TensorDesc(int n, int c, int h, int w) : Dim(n,c,h,w) {
 #ifdef __NVCC__
-        if(n==0 && c==0 && h==0 && w==0)
-            ;//assert(0);   // do nonthing in case cudnn api fail
+        if(n==0 && c==0 && h==0 && w==0){
+            CHECK_CUDNN(cudnnCreateTensorDescriptor(&desc));
+        }
         else{
             CHECK_CUDNN(cudnnCreateTensorDescriptor(&desc));
             CHECK_CUDNN(cudnnSetTensor4dDescriptor(desc,
@@ -326,8 +327,9 @@ struct FilterDesc : public Dim {
     }
 
     FilterDesc(int n, int c, int h, int w) : Dim(n,c,h,w) {
-        if(n==0 && c==0 && h==0 && w==0)
-            ;//assert(0);   // do nonthing
+        if(n==0 && c==0 && h==0 && w==0){
+            CHECK_CUDNN(cudnnCreateFilterDescriptor(&desc));
+        }
         else{
             CHECK_CUDNN(cudnnCreateFilterDescriptor(&desc));
             CHECK_CUDNN(cudnnSetFilter4dDescriptor(desc,  CUDNN_DATA_FLOAT, CUDNN_TENSOR_NCHW, n, c, h, w));

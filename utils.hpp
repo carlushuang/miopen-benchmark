@@ -81,7 +81,7 @@ struct layertimer {
         return result;
     }
 };
-
+#if 0
 struct CudaTime{
     void Init(){
         CHECK_CUDRI(cuEventCreate (&start, CU_EVENT_DEFAULT));
@@ -95,6 +95,7 @@ struct CudaTime{
         CHECK_CUDRI(cuEventRecord(start, stream));
     }
     void Stop(CUstream stream){
+        CHECK_CUDRI(cuCtxSynchronize());
         CHECK_CUDRI(cuEventRecord(stop, stream));
         CHECK_CUDRI(cuEventSynchronize(stop));
     }
@@ -106,6 +107,33 @@ struct CudaTime{
 
     CUevent start;
     CUevent stop;
+};
+#endif
+struct CudaTime{
+    void Init(){
+        CHECK_CUDA(cudaEventCreate (&start));
+        CHECK_CUDA(cudaEventCreate (&stop));
+    }
+    void Destroy(){
+        cudaEventDestroy(start);
+        cudaEventDestroy(stop);
+    }
+    void Start(){
+        CHECK_CUDA(cudaDeviceSynchronize());
+        CHECK_CUDA(cudaEventRecord(start));
+    }
+    void Stop(){
+        CHECK_CUDA(cudaEventRecord(stop));
+        CHECK_CUDA(cudaEventSynchronize(stop));
+    }
+    float GetElapsedMilliseconds(){
+        float elapsed_milliseconds;
+        CHECK_CUDA(cudaEventElapsedTime(&elapsed_milliseconds, start, stop));
+        return elapsed_milliseconds;
+    }
+
+    cudaEvent_t start;
+    cudaEvent_t stop;
 };
 
 struct BenchmarkLogger : public Timer {
@@ -169,7 +197,7 @@ struct BenchmarkLogger : public Timer {
     void toc(Function& f, bool bwd) {
 #if LAYER_TIMING == 1
 #ifdef __NVCC__
-        CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+        CHECK_CUDA(cudaDeviceSynchronize());
 #else
         CHECK_HIP(hipDeviceSynchronize());
 #endif
@@ -182,7 +210,7 @@ struct BenchmarkLogger : public Timer {
 
     void toc(const std::string& s, bool bwd) {
 #ifdef __NVCC__
-        CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+        CHECK_CUDA(cudaDeviceSynchronize());
 #else
         CHECK_HIP(hipDeviceSynchronize());
 #endif
@@ -206,9 +234,9 @@ struct BenchmarkLogger : public Timer {
 #endif
         for (int i = 0; i < reps; ++i) {
 #ifdef __NVCC__
-            cu_timer.Start(Devices::get_default_device().cu_stream);
+            cu_timer.Start();
             m.forward();
-            cu_timer.Stop(Devices::get_default_device().cu_stream);
+            cu_timer.Stop();
             layer_time = cu_timer.GetElapsedMilliseconds();
 #else
             m.forward();
@@ -243,7 +271,7 @@ struct BenchmarkLogger : public Timer {
                 timer.tic();
                 m.forward();
 #ifdef __NVCC__
-                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+                CHECK_CUDA(cudaDeviceSynchronize());
 #else
                 CHECK_HIP(hipDeviceSynchronize());
 #endif
@@ -254,7 +282,7 @@ struct BenchmarkLogger : public Timer {
                 timer.tic();
                 m.backward();
 #ifdef __NVCC__
-                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+                CHECK_CUDA(cudaDeviceSynchronize());
 #else
                 CHECK_HIP(hipDeviceSynchronize());
 #endif
@@ -273,7 +301,7 @@ struct BenchmarkLogger : public Timer {
                 fwdtime.tic();
                 m.forward();
 #ifdef __NVCC__
-                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+                CHECK_CUDA(cudaDeviceSynchronize());
 #else
                 CHECK_HIP(hipDeviceSynchronize());
 #endif
@@ -284,7 +312,7 @@ struct BenchmarkLogger : public Timer {
                 bwdtime.tic();
                 m.backward();
 #ifdef __NVCC__
-                CHECK_CUDRI(cuStreamSynchronize(Devices::get_default_device().cu_stream));
+                CHECK_CUDA(cudaDeviceSynchronize());
 #else
                 CHECK_HIP(hipDeviceSynchronize());
 #endif

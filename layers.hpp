@@ -175,7 +175,7 @@ struct ConvLayer : public ConvDesc, public ConvLayerDesc, public Layer {
         cudnnConvolutionBwdDataAlgoPerf_t perfs[5];
         int returned_algos;
         CHECK_CUDNN(cudnnFindConvolutionBackwardDataAlgorithm(cudnn::handle(), 
-            weights.desc, dinput.desc, this->desc, doutput.desc, 5, &returned_algos, perfs));
+            weights.desc, doutput.desc, this->desc, dinput.desc, 5, &returned_algos, perfs));
 
         INFO("\tCUDNN Found " << returned_algos << " bwd_data algorithms, choosing " << perfs[0].algo << ": ");
         for (int i = 0; i < returned_algos; ++i) {
@@ -186,7 +186,7 @@ struct ConvLayer : public ConvDesc, public ConvLayerDesc, public Layer {
 
         size_t bwd_data_workspace_size;
         CHECK_CUDNN(cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn::handle(),
-            weights.desc, dinput.desc, this->desc, doutput.desc, bwd_data_algo, &bwd_data_workspace_size));
+            weights.desc, doutput.desc, this->desc, dinput.desc, bwd_data_algo, &bwd_data_workspace_size));
         DEBUG("Init bwd_data " << *this << " req workspace: " << bwd_data_workspace_size);
 
         DevBuffer& buffer = WorkSpace::get(bwd_data_workspace_size);
@@ -271,10 +271,11 @@ struct ConvLayer : public ConvDesc, public ConvLayerDesc, public Layer {
         dump_cudnn_struct(output.desc);
         dump_cudnn_struct(this->desc);
         std::cout<<*this;
+#endif
         CHECK_CUDNN(cudnnConvolutionForward(cudnn::handle(),
             &alpha, input.desc, input.data, weights.desc, weights.data, this->desc,
             fwd_algo, buffer.data, buffer.size, &beta, output.desc, output.data));
-#endif
+
 #else
         CHECK_MIO(miopenConvolutionForward(mio::handle(), &alpha, input.desc, input.data, weights.desc, weights.data, this->desc, fwd_algo, &beta, output.desc, output.data, buffer.data, buffer.size));
 #endif

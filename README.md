@@ -24,3 +24,15 @@ make benchmark
 ```
 Take a look into the `Makefile` or `.cpp` sources for more details.
 
+
+### Cuda backend
+
+```
+# build
+make -f Makefile.nv
+
+# benchmark
+make -f Makefile.nv benchmark
+
+# if need change CUDA version, do 'export CUDA_PATH=/path/to/cuda' before above cmd
+```

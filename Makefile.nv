@@ -6,8 +6,8 @@ LAYER_TIMING=1
 
 # internal flags
 NVCCFLAGS   := -m${TARGET_SIZE} --std=c++11
-CCFLAGS     := -DLAYER_TIMING=$(LAYER_TIMING) -std=c++11 -Wno-literal-suffix -O3
-LDFLAGS     := -lcudnn -lcublas -lcuda
+CCFLAGS     := -DLAYER_TIMING=$(LAYER_TIMING) -std=c++11 -Wno-literal-suffix -g -O3
+LDFLAGS     := -lcudnn -lcublas
 
 # sm gencode
 SMS ?= 50 52 60 61 70
