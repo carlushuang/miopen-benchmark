@@ -6,7 +6,7 @@ LAYER_TIMING=1
 
 # internal flags
 NVCCFLAGS   := -m${TARGET_SIZE} --std=c++11
-CCFLAGS     := -DLAYER_TIMING=$(LAYER_TIMING) -std=c++11 -Wno-literal-suffix -g -O3
+CCFLAGS     := -DLAYER_TIMING=$(LAYER_TIMING) -std=c++11 -Wno-literal-suffix -g -O3 -I./
 LDFLAGS     := -lcudnn -lcublas
 
 # sm gencode
@@ -52,5 +52,44 @@ benchmark_wino: benchmark_wino.cpp $(HEADERS)
 layerwise: layerwise.cpp $(HEADERS)
 	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu layerwise.cpp
 
+extra_net: extra-net/vgg16 extra-net/vgg19 extra-net/shufflenet extra-net/resnext extra-net/mobilenet \
+	extra-net/mobilenet extra-net/mobilenet_v2 extra-net/inception_v3 extra-net/inception_v4 \
+	extra-net/googlenet extra-net/densenet
+
+
+extra-net/vgg16: extra-net/VGG16.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/VGG16.cpp
+
+extra-net/vgg19: extra-net/VGG19.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/VGG19.cpp
+
+extra-net/shufflenet: extra-net/ShuffleNet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/ShuffleNet.cpp
+
+extra-net/resnext: extra-net/resneXt.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/resneXt.cpp
+
+extra-net/mobilenet: extra-net/MobileNet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/MobileNet.cpp
+
+extra-net/mobilenet_v2: extra-net/MobileNet_v2.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/MobileNet_v2.cpp
+
+extra-net/inception_v3: extra-net/Inception_v3.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/Inception_v3.cpp
+
+extra-net/inception_v4: extra-net/Inception_v4.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/Inception_v4.cpp
+
+extra-net/googlenet: extra-net/GoogleNet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/GoogleNet.cpp
+
+extra-net/densenet: extra-net/DenseNet.cpp $(HEADERS)
+	$(NVCC) $(ALL_CCFLAGS) $(GENCODE_FLAGS) $(ALL_LDFLAGS) -o $@ -x cu extra-net/DenseNet.cpp
+
+
 clean:
-	rm -f *.o *.out benchmark segfault alexnet resnet benchmark_wino layerwise gputop main
+	rm -f *.o *.out benchmark segfault alexnet resnet benchmark_wino layerwise gputop main \
+	extra-net/vgg16 extra-net/vgg19 extra-net/shufflenet extra-net/resnext extra-net/mobilenet \
+	extra-net/mobilenet extra-net/mobilenet_v2 extra-net/inception_v3 extra-net/inception_v4 \
+	extra-net/googlenet extra-net/densenet
